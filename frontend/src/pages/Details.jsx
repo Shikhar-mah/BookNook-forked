@@ -1,7 +1,6 @@
 import React from "react";
 import { label, dateText, toBookForm } from "../utils/helpers";
 import { Pagination } from "../components/common/Pagination";
-
 export function Details({ book, historyPage, onPageChange, me, setView, setBookModal, setRequestModal, returnBook }) {
   const isAdmin = me.role === "ADMIN";
   const ownedByMe = book.owner.id === me.id;
@@ -19,7 +18,7 @@ export function Details({ book, historyPage, onPageChange, me, setView, setBookM
       </div>
       <div className="panel detail-panel">
         <div className="flex-between">
-          <button className="btn" onClick={() => setView("catalog")}>Back to catalog</button>
+          <button className="btn" onClick={() => setView("catalog")}>Back to browse</button>
           {isAdmin && <span className="admin-badge">Admin Mode</span>}
         </div>
         <h3>{book.title}</h3>

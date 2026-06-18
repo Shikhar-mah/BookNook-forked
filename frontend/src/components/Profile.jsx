@@ -1,7 +1,6 @@
 import React from "react";
 import { UserRound } from "lucide-react";
 import { initials } from "../utils/helpers";
-
 export function Profile({ user }) {
   return (
     <div className="profile-box">

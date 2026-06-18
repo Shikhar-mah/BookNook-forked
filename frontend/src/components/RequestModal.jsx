@@ -2,33 +2,26 @@ import React, { useState } from "react";
 import { Modal } from "./common/Modal";
 import { FormInput } from "./common/FormInput";
 import { validateRequestForm } from "../utils/helpers";
-
 export function RequestModal({ book, onClose, onSave }) {
   if (!book) return null;
-
   const [form, setForm] = useState({
     bookId: book.id,
     requestedLoanDays: String(book.defaultLoanDays || 14),
     borrowerNote: ""
   });
-
   const [errors, setErrors] = useState({});
-
   function submit() {
     const cleanedForm = {
       ...form,
       requestedLoanDays: parseInt(form.requestedLoanDays, 10),
       borrowerNote: form.borrowerNote?.trim() || ""
     };
-
     const nextErrors = validateRequestForm(cleanedForm);
     setErrors(nextErrors);
-
     if (Object.keys(nextErrors).length === 0) {
       onSave(cleanedForm);
     }
   }
-
   return (
     <Modal title={`Request: ${book.title}`} onClose={onClose} onSubmit={submit}>
       <FormInput
@@ -42,7 +35,6 @@ export function RequestModal({ book, onClose, onSave }) {
           setForm({ ...form, requestedLoanDays: onlyInteger });
         }}
       />
-
       <label className="field full">
         <span>Note to owner</span>
         <textarea

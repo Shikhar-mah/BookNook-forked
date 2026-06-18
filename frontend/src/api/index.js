@@ -1,29 +1,23 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
-
 async function request(path, options = {}) {
   const token = localStorage.getItem("bn_token");
-  const headers = { 
-    "Content-Type": "application/json", 
-    ...(options.headers || {}) 
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {})
   };
-  
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
-
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers
   });
-
   if (response.status === 401) {
     localStorage.removeItem("bn_token");
     window.location.reload();
     throw new Error("Session expired. Please login again.");
   }
-
   const text = await response.text();
-
   if (!response.ok) {
     let message = "Something went wrong.";
     try {
@@ -34,15 +28,13 @@ async function request(path, options = {}) {
     }
     throw new Error(message);
   }
-
   if (response.status === 204) return null;
   return text ? JSON.parse(text) : null;
 }
-
 export const api = {
-  login: (email, password) => request("/auth/login", { 
-    method: "POST", 
-    body: JSON.stringify({ email, password }) 
+  login: (email, password) => request("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password })
   }),
   register: (payload) => request("/auth/register", {
     method: "POST",

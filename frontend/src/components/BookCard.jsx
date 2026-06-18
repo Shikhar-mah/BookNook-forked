@@ -1,11 +1,9 @@
 import React from "react";
 import { label, dateText } from "../utils/helpers";
-
 export function BookCard({ book, me, openDetails, setRequestModal, setBookModal, returnBook }) {
   const isAdmin = me.role === "ADMIN";
   const ownedByMe = book.owner.id === me.id;
   const borrowedByMe = book.activeLoanId && book.activeLoanBorrowerId === me.id;
-  
   return (
     <article className={`book-card ${isAdmin ? "admin-border" : ""}`}>
       <div className="cover">
@@ -45,7 +43,6 @@ export function BookCard({ book, me, openDetails, setRequestModal, setBookModal,
     </article>
   );
 }
-
 function toBookForm(book) {
   return { ...book, genreId: book.genre?.id };
 }

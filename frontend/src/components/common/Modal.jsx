@@ -1,5 +1,4 @@
 import React from "react";
-
 export function Modal({ title, onClose, onSubmit, children }) {
   return (
     <div className="modal-backdrop open">

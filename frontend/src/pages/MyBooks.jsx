@@ -4,24 +4,23 @@ import { Table } from "../components/common/Table";
 import { Pagination } from "../components/common/Pagination";
 import { EmptyState } from "../components/common/EmptyState";
 import { label, toBookForm } from "../utils/helpers";
-
 export function MyBooks({ page, onPageChange, setBookModal, deleteBook, openDetails }) {
   if (page.content.length === 0) {
     return (
-      <Panel title="My Shared Books">
-        <EmptyState 
-          icon="BookPlus" 
-          title="Your library is empty" 
-          message="You haven't shared any books with the community yet. Start by adding your first book!" 
+      <Panel title="My Shelf">
+        <EmptyState
+          icon="BookPlus"
+          title="Your library is empty"
+          message="You haven't shared any books with the community yet. Start by adding your first book!"
           actionLabel="Add your first book"
           onAction={() => setBookModal({ title: "", author: "", genreId: "", condition: "good", exchangeLocation: "", defaultLoanDays: 14, description: "" })}
         />
       </Panel>
     );
   }
-
   return (
-    <Panel title="My Shared Books" badge={`${page.totalElements} records`}>
+    <>
+    <Panel title="My Shelf" badge={`${page.totalElements} records`}>
       <Table headers={["Book", "Genre", "Status", "Actions"]}>
         {page.content.map((book) => (
           <tr key={book.id}>
@@ -38,5 +37,6 @@ export function MyBooks({ page, onPageChange, setBookModal, deleteBook, openDeta
       </Table>
       <Pagination page={page.page} totalPages={page.totalPages} totalElements={page.totalElements} onPageChange={onPageChange} />
     </Panel>
+    </>
   );
 }

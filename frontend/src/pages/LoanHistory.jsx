@@ -3,7 +3,6 @@ import { Panel } from "../components/common/Panel";
 import { Table } from "../components/common/Table";
 import { Pagination } from "../components/common/Pagination";
 import { label, dateText } from "../utils/helpers";
-
 export function LoanHistory({ page, onPageChange }) {
   return (
     <Panel title="Borrowing History" badge={`${page.totalElements} records`}>

@@ -1,14 +1,12 @@
 import React from "react";
-
 export function Skeleton({ className, width, height, borderRadius = "4px" }) {
   return (
-    <div 
-      className={`skeleton ${className || ""}`} 
+    <div
+      className={`skeleton ${className || ""}`}
       style={{ width, height, borderRadius }}
     />
   );
 }
-
 export function BookCardSkeleton() {
   return (
     <div className="book-card skeleton-card">

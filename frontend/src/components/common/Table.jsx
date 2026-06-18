@@ -1,6 +1,5 @@
 import React from "react";
 import { EmptyState } from "./EmptyState";
-
 export function Table({ headers, children }) {
   const rows = React.Children.count(children);
   if (!rows) return <EmptyState icon="Inbox" title="Nothing to show" message="There are no records to display in this list." />;

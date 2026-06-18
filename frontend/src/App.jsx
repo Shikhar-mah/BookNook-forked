@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   BookOpen,
   CheckSquare,
+  Home as HomeIcon,
   History,
   LibraryBig,
   LogOut,
@@ -24,8 +25,6 @@ import { MyBooks } from "./pages/MyBooks";
 import { Borrowed } from "./pages/Borrowed";
 import { LoanHistory } from "./pages/LoanHistory";
 import { Details } from "./pages/Details";
-import axios from "axios";
-
 const blankBook = {
   title: "",
   author: "",
@@ -36,22 +35,42 @@ const blankBook = {
   coverUrl: ""
 };
 
+function HomePage({ stats, dailyThought, setView, setFilters }) {
+  return (
+    <section className="home-page">
+      {dailyThought && (
+        <div className="quote-card home-quote-card">
+          <div className="quote-label">📖 Daily Thought</div>
+          <blockquote className="quote-text">“{dailyThought.quote}”</blockquote>
+          <div className="quote-author">— {dailyThought.author}</div>
+        </div>
+      )}
+      {stats && <Stats stats={stats} setView={setView} setFilters={setFilters} />}
+      <section className="how-it-works panel">
+        <div className="panel-head"><h3>How it works</h3></div>
+        <div className="steps-grid">
+          <article><span>1</span><h4>Browse</h4><p>Search the shared shelf and filter books by genre, status, or due date.</p></article>
+          <article><span>2</span><h4>Request</h4><p>Send a borrow request with your preferred number of reading days.</p></article>
+          <article><span>3</span><h4>Read & return</h4><p>Track active loans and mark books returned when you are done.</p></article>
+        </div>
+      </section>
+    </section>
+  );
+}
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem("bn_token"));
-  const [view, setView] = useState("catalog");
+  const [view, setView] = useState("home");
   const [darkMode, setDarkMode] = useState(localStorage.getItem("bn_theme") === "dark");
   const [me, setMe] = useState(null);
   const [stats, setStats] = useState(null);
   const [genres, setGenres] = useState([]);
-  
-  // Pagination States
   const [booksPage, setBooksPage] = useState({ content: [], totalPages: 0, totalElements: 0, page: 0 });
   const [requestsPage, setRequestsPage] = useState({ content: [], totalPages: 0, totalElements: 0, page: 0 });
   const [myBooksPage, setMyBooksPage] = useState({ content: [], totalPages: 0, totalElements: 0, page: 0 });
   const [borrowedPage, setBorrowedPage] = useState({ content: [], totalPages: 0, totalElements: 0, page: 0 });
   const [historyPage, setHistoryPage] = useState({ content: [], totalPages: 0, totalElements: 0, page: 0 });
   const [bookHistoryPage, setBookHistoryPage] = useState({ content: [], totalPages: 0, totalElements: 0, page: 0 });
-  
   const [selectedBook, setSelectedBook] = useState(null);
   const [filters, setFilters] = useState({ search: "", genreId: "", availability: "all", sort: "title", page: 0 });
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,61 +78,47 @@ export default function App() {
   const [requestModal, setRequestModal] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(true);
-  
   const [dailyThought, setDailyThought] = useState(null);
-
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
     localStorage.setItem("bn_theme", darkMode ? "dark" : "light");
   }, [darkMode]);
-
-
 useEffect(() => {
-  axios
-    .get("http://localhost:8080/api/quote/today")
-    .then((response) => {
-      setDailyThought(response.data);
-      console.log(response);
+  fetch("http://localhost:8080/api/quote/today")
+    .then((response) => response.ok ? response.json() : null)
+    .then((quote) => {
+      if (quote) setDailyThought(quote);
     })
-    .catch((error) => {
-      console.log(error);
-    });
+    .catch(() => {});
 }, []);
-
-
   useEffect(() => {
     if (isAuthenticated) {
       loadBootstrap();
     }
   }, [isAuthenticated]);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       setFilters(prev => ({ ...prev, search: searchTerm, page: 0 }));
     }, 400);
     return () => clearTimeout(timer);
   }, [searchTerm]);
-
   useEffect(() => {
     if (isAuthenticated) {
       loadCatalog();
     }
   }, [filters, isAuthenticated]);
-
   async function handleLogin(token, user) {
     localStorage.setItem("bn_token", token);
     setMe(user);
     setIsAuthenticated(true);
     notify("Welcome back, " + user.fullName + "!");
   }
-
   function handleLogout() {
     localStorage.removeItem("bn_token");
     setIsAuthenticated(false);
     setMe(null);
     notify("Logged out successfully.");
   }
-
   async function loadBootstrap() {
     try {
       setLoading(true);
@@ -127,7 +132,6 @@ useEffect(() => {
       setLoading(false);
     }
   }
-
   async function refresh() {
     const dashboard = await api.dashboard();
     setStats(dashboard);
@@ -139,7 +143,6 @@ useEffect(() => {
       loadHistory(historyPage.page)
     ]);
   }
-
   async function loadCatalog() {
     try {
       setLoading(true);
@@ -147,7 +150,8 @@ useEffect(() => {
         search: filters.search,
         availability: filters.availability,
         sort: filters.sort,
-        page: filters.page
+        page: filters.page,
+        size: 20
       };
       if (filters.genreId) params.genreId = filters.genreId;
       setBooksPage(await api.books(params));
@@ -157,34 +161,27 @@ useEffect(() => {
       setLoading(false);
     }
   }
-
   async function loadRequests(page) {
     try { setRequestsPage(await api.requests(page)); } catch (e) { notify(e.message, "error"); }
   }
-
   async function loadMyBooks(page) {
     try { setMyBooksPage(await api.myBooks(page)); } catch (e) { notify(e.message, "error"); }
   }
-
   async function loadBorrowed(page) {
     try { setBorrowedPage(await api.borrowed(page)); } catch (e) { notify(e.message, "error"); }
   }
-
   async function loadHistory(page) {
     try { setHistoryPage(await api.loanHistory(page)); } catch (e) { notify(e.message, "error"); }
   }
-
   async function loadBookHistory(id, page) {
     try { setBookHistoryPage(await api.bookHistory(id, page)); } catch (e) { notify(e.message, "error"); }
   }
-
   async function openDetails(book) {
     const freshBook = await api.book(book.id);
     setSelectedBook(freshBook);
     await loadBookHistory(book.id, 0);
     setView("detail");
   }
-
   async function saveBook(payload) {
     try {
       if (bookModal?.id) await api.updateBook(bookModal.id, payload);
@@ -196,7 +193,6 @@ useEffect(() => {
       notify(error.message, "error");
     }
   }
-
   async function deleteBook(id) {
     if (!window.confirm("Are you sure you want to remove this book from the library?")) return;
     try {
@@ -207,7 +203,6 @@ useEffect(() => {
       notify(error.message, "error");
     }
   }
-
   async function sendRequest(payload) {
     try {
       await api.requestBook(payload);
@@ -218,7 +213,6 @@ useEffect(() => {
       notify(error.message, "error");
     }
   }
-
   async function approve(id) {
     try {
       await api.approve(id);
@@ -228,7 +222,6 @@ useEffect(() => {
       notify(error.message, "error");
     }
   }
-
   async function reject(id) {
     if (!window.confirm("Are you sure you want to reject this request?")) return;
     try {
@@ -239,7 +232,6 @@ useEffect(() => {
       notify(error.message, "error");
     }
   }
-
   async function returnBook(id) {
     try {
       await api.returnBook(id);
@@ -249,34 +241,31 @@ useEffect(() => {
       notify(error.message, "error");
     }
   }
-
   function notify(message, type = "success") {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, message, type }]);
   }
-
   function removeToast(id) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }
-
   const navSections = [
     {
       label: "Discovery",
       items: [
-        ["catalog", "Catalog", BookOpen]
+        ["home", "Home", HomeIcon],
+        ["catalog", "Browse", BookOpen]
       ]
     },
     {
       label: "Your Activity",
       items: [
         ["requests", "Requests", CheckSquare, stats?.pendingApprovals],
-        ["myBooks", "My Books", LibraryBig],
+        ["myBooks", "My Shelf", LibraryBig],
         ["borrowed", "Currently Reading", Undo2, stats?.activeBorrowed],
         ["history", "History", History]
       ]
     }
   ];
-
   if (!isAuthenticated) {
     return (
       <>
@@ -285,7 +274,6 @@ useEffect(() => {
       </>
     );
   }
-
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -296,9 +284,6 @@ useEffect(() => {
             <p>BA reading community</p>
           </div>
         </div>
-
-        {me && <Profile user={me} />}
-        
         <nav className="nav">
           {navSections.map((section) => (
             <div key={section.label} className="nav-section">
@@ -315,44 +300,40 @@ useEffect(() => {
             </div>
           ))}
         </nav>
-
-        <div className="sidebar-footer">
-          <button className="logout-btn" onClick={handleLogout}>
+        <div className="top-nav-actions">
+          {me && <Profile user={me} />}
+          <button className="btn icon-only theme-toggle" onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
+            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <button className="logout-btn" onClick={handleLogout} title="Sign Out">
             <LogOut size={18} />
             <span>Sign Out</span>
           </button>
         </div>
       </aside>
-
       <main className="main">
-        <section className="topbar">
-          <div className="page-title">
-            <div className="page-kicker">Community library tracker</div>
-            <h2>BA Reading Community Tracker</h2>
-            <p>Share books, discover reads across the capability, manage approvals, and track returns without spreadsheet drift.</p>
-          </div>
-          <div className="actions">
-            <button className="btn primary" onClick={() => setBookModal({ ...blankBook })}><Plus size={17} /> Add book</button>
-            <button className="btn" onClick={refresh}><RotateCcw size={17} /> Refresh</button>
-            <button className="btn icon-only" onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
-              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-          </div>
-        </section>
-          {dailyThought && (
-  <div className="quote-card">
-    <div className="quote-label">📖 Daily Thought</div>
-    <blockquote className="quote-text">
-      "{dailyThought.quote}"
-    </blockquote>
-    <div className="quote-author">
-      — {dailyThought.author}
-    </div>
-  </div>
-)}
-        {stats && <Stats stats={stats} setView={setView} setFilters={setFilters} />}
-        {loading && view !== "catalog" && <div className="panel empty">Loading Book Nook...</div>}
-
+        {view === "home" && (
+          <section className="topbar home-only-topbar">
+            <div className="page-title">
+              <div className="page-kicker">Community library tracker</div>
+              <h2>BA Reading Community Tracker</h2>
+              <p>Share books, discover reads across the capability, manage approvals, and track returns without spreadsheet drift.</p>
+            </div>
+            <div className="actions">
+              <button className="btn primary" onClick={() => setBookModal({ ...blankBook })}><Plus size={17} /> Add book</button>
+              <button className="btn" onClick={refresh}><RotateCcw size={17} /> Refresh</button>
+            </div>
+          </section>
+        )}
+        {view === "home" && (
+          <HomePage
+            stats={stats}
+            dailyThought={dailyThought}
+            setView={setView}
+            setFilters={setFilters}
+          />
+        )}
+        {loading && !["catalog", "home"].includes(view) && <div className="panel empty">Loading Book Nook...</div>}
         {view === "catalog" && (
           <Catalog
             page={booksPage}
@@ -365,7 +346,6 @@ useEffect(() => {
             me={me}
             openDetails={openDetails}
             setRequestModal={setRequestModal}
-            setBookModal={setBookModal}
             returnBook={returnBook}
           />
         )}
@@ -374,19 +354,17 @@ useEffect(() => {
         {!loading && view === "borrowed" && <Borrowed page={borrowedPage} onPageChange={loadBorrowed} returnBook={returnBook} openDetails={openDetails} />}
         {!loading && view === "history" && <LoanHistory page={historyPage} onPageChange={loadHistory} />}
         {!loading && view === "detail" && selectedBook && (
-          <Details 
-            book={selectedBook} 
-            historyPage={bookHistoryPage} 
-            onPageChange={(p) => loadBookHistory(selectedBook.id, p)} 
-            me={me} 
-            setView={setView} 
-            setBookModal={setBookModal} 
-            setRequestModal={setRequestModal} 
+          <Details
+            book={selectedBook}
+            historyPage={bookHistoryPage}
+            onPageChange={(p) => loadBookHistory(selectedBook.id, p)}
+            me={me}
+            setView={setView}
+            setRequestModal={setRequestModal}
             returnBook={returnBook}
           />
         )}
       </main>
-
       {bookModal && <BookModal book={bookModal} genres={genres} onClose={() => setBookModal(null)} onSave={saveBook} />}
       {requestModal && <RequestModal book={requestModal} onClose={() => setRequestModal(null)} onSave={sendRequest} />}
       <ToastContainer toasts={toasts} onRemove={removeToast} />

@@ -4,22 +4,19 @@ import { Table } from "../components/common/Table";
 import { Pagination } from "../components/common/Pagination";
 import { EmptyState } from "../components/common/EmptyState";
 import { label, dateText } from "../utils/helpers";
-
 export function Requests({ page, onPageChange, me, approve, reject, openDetails }) {
   const isAdmin = me.role === "ADMIN";
-  
   if (page.content.length === 0) {
     return (
       <Panel title="Borrow Requests">
-        <EmptyState 
-          icon="ClipboardCheck" 
-          title="No requests yet" 
-          message="When someone wants to borrow your books, or when you request a book, they will appear here." 
+        <EmptyState
+          icon="ClipboardCheck"
+          title="No requests yet"
+          message="When someone wants to borrow your books, or when you request a book, they will appear here."
         />
       </Panel>
     );
   }
-
   return (
     <Panel title="Borrow Requests" badge={`${page.totalElements} records`}>
       <Table headers={["Book", "Borrower", "Owner", "Status", "Requested", "Actions"]}>
