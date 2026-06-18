@@ -71,6 +71,20 @@ export default function App() {
     localStorage.setItem("bn_theme", darkMode ? "dark" : "light");
   }, [darkMode]);
 
+
+useEffect(() => {
+  axios
+    .get("http://localhost:8080/api/quote/today")
+    .then((response) => {
+      setDailyThought(response.data);
+      console.log(response);
+    })
+    .catch((error) => {
+      console.log(error);
+    });
+}, []);
+
+
   useEffect(() => {
     if (isAuthenticated) {
       loadBootstrap();
