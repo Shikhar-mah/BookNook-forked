@@ -6,22 +6,22 @@ export function Stats({ stats, setView, setFilters }) {
     <section className="grid stats">
       <Stat 
         label="Books listed" 
-        value={stats.booksListed} 
+        value={stats.totalBooks} 
         onClick={() => { setView("catalog"); setFilters(f => ({ ...f, availability: "all" })); }}
       />
       <Stat 
         label="Available now" 
-        value={stats.availableNow} 
+        value={stats.availableBooks} 
         onClick={() => { setView("catalog"); setFilters(f => ({ ...f, availability: "available" })); }}
       />
       <Stat 
         label="Pending approvals" 
-        value={stats.pendingApprovals} 
+        value={stats.pendingRequests} 
         onClick={() => setView("requests")}
       />
       <Stat 
         label="Currently reading" 
-        value={stats.activeBorrowed} 
+        value={stats.pendingRequests} 
         onClick={() => setView("borrowed")}
       />
     </section>
