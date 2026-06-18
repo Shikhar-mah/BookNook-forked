@@ -42,11 +42,34 @@ app.get("/api/loans/borrowed", authenticate, AppController.borrowed);
 app.get("/api/loans/history", authenticate, AppController.loanHistory);
 app.post("/api/loans/:id/return", authenticate, AppController.returnBook);
 
+
+
 // Placeholder for other routes
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
+app.get("/api/quote/today", async (req, res) => {
+  try {
+    const response = await fetch("https://dummyjson.com/quotes/random");
 
+    if (!response.ok) {
+      return res.status(response.status).json({
+        message: "ZenQuotes API failed",
+        status: response.status,
+      });
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error: any) {
+    console.error("Quote API error:", error.message);
+
+    res.status(500).json({
+      message: "Failed to fetch quote from backend",
+      error: error.message,
+    });
+  }
+});
 app.use(errorHandler);
 
 app.listen(port, () => {

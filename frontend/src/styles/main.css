@@ -1209,4 +1209,34 @@ tr:last-child td { border-bottom: 0; }
     border-radius: 0;
     box-shadow: none;
   }
+  .quote-card {
+  margin-bottom: 24px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.quote-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.quote-text {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.quote-author {
+  margin-top: 12px;
+  text-align: right;
+  font-style: italic;
+  opacity: 0.8;
+}
 }

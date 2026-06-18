@@ -24,6 +24,7 @@ import { MyBooks } from "./pages/MyBooks";
 import { Borrowed } from "./pages/Borrowed";
 import { LoanHistory } from "./pages/LoanHistory";
 import { Details } from "./pages/Details";
+import axios from "axios";
 
 const blankBook = {
   title: "",
@@ -58,11 +59,27 @@ export default function App() {
   const [requestModal, setRequestModal] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  const [dailyThought, setDailyThought] = useState(null);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
     localStorage.setItem("bn_theme", darkMode ? "dark" : "light");
   }, [darkMode]);
+
+
+useEffect(() => {
+  axios
+    .get("http://localhost:8080/api/quote/today")
+    .then((response) => {
+      setDailyThought(response.data);
+      console.log(response);
+    })
+    .catch((error) => {
+      console.log(error);
+    });
+}, []);
+
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -322,7 +339,17 @@ export default function App() {
             </button>
           </div>
         </section>
-
+          {dailyThought && (
+  <div className="quote-card">
+    <div className="quote-label">📖 Daily Thought</div>
+    <blockquote className="quote-text">
+      "{dailyThought.quote}"
+    </blockquote>
+    <div className="quote-author">
+      — {dailyThought.author}
+    </div>
+  </div>
+)}
         {stats && <Stats stats={stats} setView={setView} setFilters={setFilters} />}
         {loading && view !== "catalog" && <div className="panel empty">Loading Book Nook...</div>}
 
