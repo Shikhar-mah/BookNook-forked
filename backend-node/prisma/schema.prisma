@@ -3,12 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id              String          @id @default(uuid()) @db.VarChar(36)
   fullName        String          @map("full_name") @db.VarChar(120)
   email           String          @unique @db.VarChar(180)
   team            String?         @db.VarChar(120)
@@ -18,7 +18,7 @@ model User {
   avatarUrl       String?         @map("avatar_url") @db.Text
   password        String?         @db.VarChar(255)
   createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt       DateTime        @default(now()) @map("updated_at") @db.Timestamp(6)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamp(6)
 
   ownedBooks      Book[]          @relation("BookOwner")
   borrowRequests  BorrowRequest[] @relation("Requester")
@@ -35,7 +35,7 @@ model User {
 }
 
 model Genre {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id           String   @id @default(uuid()) @db.VarChar(36)
   name         String   @unique @db.VarChar(80)
   displayOrder Int?     @default(0) @map("display_order")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
@@ -45,9 +45,9 @@ model Genre {
 }
 
 model Book {
-  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  ownerId           String          @map("owner_id") @db.Uuid
-  genreId           String?         @map("genre_id") @db.Uuid
+  id                String          @id @default(uuid()) @db.VarChar(36)
+  ownerId           String          @map("owner_id") @db.VarChar(36)
+  genreId           String?         @map("genre_id") @db.VarChar(36)
   title             String          @db.VarChar(220)
   author            String          @db.VarChar(180)
   isbn              String?         @db.VarChar(30)
@@ -59,7 +59,7 @@ model Book {
   coverColor        String?         @map("cover_color") @db.VarChar(20)
   coverUrl          String?         @map("cover_url") @db.Text
   createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt         DateTime        @default(now()) @map("updated_at") @db.Timestamp(6)
+  updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamp(6)
 
   owner             User            @relation("BookOwner", fields: [ownerId], references: [id])
   genre             Genre?          @relation(fields: [genreId], references: [id])
@@ -73,10 +73,10 @@ model Book {
 }
 
 model BorrowRequest {
-  id                   String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  bookId               String          @map("book_id") @db.Uuid
-  requesterId          String          @map("requester_id") @db.Uuid
-  ownerId              String          @map("owner_id") @db.Uuid
+  id                   String          @id @default(uuid()) @db.VarChar(36)
+  bookId               String          @map("book_id") @db.VarChar(36)
+  requesterId          String          @map("requester_id") @db.VarChar(36)
+  ownerId              String          @map("owner_id") @db.VarChar(36)
   status               String          @default("pending") @db.VarChar(40)
   requestedLoanDays    Int             @default(14) @map("requested_loan_days")
   borrowerNote         String?         @map("borrower_note") @db.Text
@@ -85,7 +85,7 @@ model BorrowRequest {
   respondedAt          DateTime?       @map("responded_at") @db.Timestamp(6)
   expiresAt            DateTime?       @map("expires_at") @db.Timestamp(6)
   createdAt            DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt            DateTime        @default(now()) @map("updated_at") @db.Timestamp(6)
+  updatedAt            DateTime        @updatedAt @map("updated_at") @db.Timestamp(6)
 
   book                 Book            @relation(fields: [bookId], references: [id])
   requester            User            @relation("Requester", fields: [requesterId], references: [id])
@@ -98,11 +98,11 @@ model BorrowRequest {
 }
 
 model Loan {
-  id                    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  bookId                String          @map("book_id") @db.Uuid
-  borrowRequestId       String?         @map("borrow_request_id") @db.Uuid
-  borrowerId            String          @map("borrower_id") @db.Uuid
-  ownerId               String          @map("owner_id") @db.Uuid
+  id                    String          @id @default(uuid()) @db.VarChar(36)
+  bookId                String          @map("book_id") @db.VarChar(36)
+  borrowRequestId       String?         @map("borrow_request_id") @db.VarChar(36)
+  borrowerId            String          @map("borrower_id") @db.VarChar(36)
+  ownerId               String          @map("owner_id") @db.VarChar(36)
   status                String          @default("active") @db.VarChar(40)
   borrowedAt            DateTime        @default(now()) @map("borrowed_at") @db.Timestamp(6)
   dueAt                 DateTime        @map("due_at") @db.Timestamp(6)
@@ -111,7 +111,7 @@ model Loan {
   ownerReturnNote       String?         @map("owner_return_note") @db.Text
   returnConfirmedByOwner Boolean        @default(false) @map("return_confirmed_by_owner")
   createdAt             DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt             DateTime        @default(now()) @map("updated_at") @db.Timestamp(6)
+  updatedAt             DateTime        @updatedAt @map("updated_at") @db.Timestamp(6)
 
   book                  Book            @relation(fields: [bookId], references: [id])
   borrowRequest         BorrowRequest?  @relation(fields: [borrowRequestId], references: [id])
@@ -125,14 +125,14 @@ model Loan {
 }
 
 model BookHistory {
-  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  bookId          String          @map("book_id") @db.Uuid
-  actorId         String?         @map("actor_id") @db.Uuid
+  id              String          @id @default(uuid()) @db.VarChar(36)
+  bookId          String          @map("book_id") @db.VarChar(36)
+  actorId         String?         @map("actor_id") @db.VarChar(36)
   eventType       String          @map("event_type") @db.VarChar(80)
   eventTitle      String?         @map("event_title") @db.VarChar(180)
   eventMessage    String?         @map("event_message") @db.Text
-  borrowRequestId String?         @map("borrow_request_id") @db.Uuid
-  loanId          String?         @map("loan_id") @db.Uuid
+  borrowRequestId String?         @map("borrow_request_id") @db.VarChar(36)
+  loanId          String?         @map("loan_id") @db.VarChar(36)
   createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
 
   book            Book            @relation(fields: [bookId], references: [id])
@@ -144,15 +144,15 @@ model BookHistory {
 }
 
 model Notification {
-  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  recipientId     String          @map("recipient_id") @db.Uuid
-  actorId         String?         @map("actor_id") @db.Uuid
+  id              String          @id @default(uuid()) @db.VarChar(36)
+  recipientId     String          @map("recipient_id") @db.VarChar(36)
+  actorId         String?         @map("actor_id") @db.VarChar(36)
   type            String          @db.VarChar(80)
   title           String          @db.VarChar(180)
   message         String?         @db.Text
-  bookId          String?         @map("book_id") @db.Uuid
-  borrowRequestId String?         @map("borrow_request_id") @db.Uuid
-  loanId          String?         @map("loan_id") @db.Uuid
+  bookId          String?         @map("book_id") @db.VarChar(36)
+  borrowRequestId String?         @map("borrow_request_id") @db.VarChar(36)
+  loanId          String?         @map("loan_id") @db.VarChar(36)
   channel         String?         @default("in_app") @db.VarChar(40)
   readAt          DateTime?       @map("read_at") @db.Timestamp(6)
   createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
@@ -167,14 +167,14 @@ model Notification {
 }
 
 model Review {
-  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  bookId          String          @map("book_id") @db.Uuid
-  loanId          String?         @map("loan_id") @db.Uuid
-  reviewerId      String          @map("reviewer_id") @db.Uuid
+  id              String          @id @default(uuid()) @db.VarChar(36)
+  bookId          String          @map("book_id") @db.VarChar(36)
+  loanId          String?         @map("loan_id") @db.VarChar(36)
+  reviewerId      String          @map("reviewer_id") @db.VarChar(36)
   rating          Int?
   comment         String?         @db.Text
   createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt       DateTime        @default(now()) @map("updated_at") @db.Timestamp(6)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamp(6)
 
   book            Book            @relation(fields: [bookId], references: [id])
   loan            Loan?           @relation(fields: [loanId], references: [id])
@@ -184,15 +184,15 @@ model Review {
 }
 
 model AuditLog {
-  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  actorId         String?         @map("actor_id") @db.Uuid
+  id              String          @id @default(uuid()) @db.VarChar(36)
+  actorId         String?         @map("actor_id") @db.VarChar(36)
   action          String          @db.VarChar(80)
   entityType      String          @map("entity_type") @db.VarChar(80)
-  entityId        String?         @map("entity_id") @db.Uuid
+  entityId        String?         @map("entity_id") @db.VarChar(36)
   oldValue        Json?           @map("old_value")
   newValue        Json?           @map("new_value")
   ipAddress       String?         @map("ip_address") @db.VarChar(80)
-  userAgent       String?         @map("user_agent") @db.Text
+  userAgent       String?         @db.Text
   createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
 
   actor           User?           @relation(fields: [actorId], references: [id])
