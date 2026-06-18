@@ -13,7 +13,16 @@ export function Stats({ stats, setView, setFilters }) {
         value={stats.availableBooks}
         onClick={() => { setView("catalog"); setFilters(f => ({ ...f, availability: "available" })); }}
       />
-      
+      {/* <Stat
+        label="Pending approvals"
+        value={stats.pendingRequests}
+        onClick={() => setView("requests")}
+      />
+      <Stat
+        label="Currently reading"
+        value={stats.activeBorrowed}
+        onClick={() => setView("borrowed")}
+      /> */}
     </section>
   );
 }

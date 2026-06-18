@@ -35,16 +35,27 @@ const blankBook = {
   coverUrl: ""
 };
 
-function HomePage({ stats, dailyThought, setView, setFilters }) {
+function HomePage({ stats, dailyThought, setView, setFilters, setBookModal }) {
   return (
     <section className="home-page">
-      {dailyThought && (
-        <div className="quote-card home-quote-card">
-          <div className="quote-label">📖 Daily Thought</div>
-          <blockquote className="quote-text">“{dailyThought.quote}”</blockquote>
-          <div className="quote-author">— {dailyThought.author}</div>
+      <div className="home-hero panel">
+        <div>
+          <div className="page-kicker">Community library tracker</div>
+          <h2>Find your next read from the BA shelf.</h2>
+          <p>Browse available books, share your own shelf, request a copy, and track every return in one simple place.</p>
+          <div className="home-actions">
+            <button className="btn primary" onClick={() => setView("catalog")}>Browse books</button>
+            <button className="btn" onClick={() => setBookModal({ ...blankBook })}>Add book</button>
+          </div>
         </div>
-      )}
+        {dailyThought && (
+          <div className="quote-card hero-quote">
+            <div className="quote-label">📖 Daily Thought</div>
+            <blockquote className="quote-text">“{dailyThought.quote}”</blockquote>
+            <div className="quote-author">— {dailyThought.author}</div>
+          </div>
+        )}
+      </div>
       {stats && <Stats stats={stats} setView={setView} setFilters={setFilters} />}
       <section className="how-it-works panel">
         <div className="panel-head"><h3>How it works</h3></div>
@@ -302,9 +313,6 @@ useEffect(() => {
         </nav>
         <div className="top-nav-actions">
           {me && <Profile user={me} />}
-          <button className="btn icon-only theme-toggle" onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
-            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
           <button className="logout-btn" onClick={handleLogout} title="Sign Out">
             <LogOut size={18} />
             <span>Sign Out</span>
@@ -312,25 +320,28 @@ useEffect(() => {
         </div>
       </aside>
       <main className="main">
-        {view === "home" && (
-          <section className="topbar home-only-topbar">
-            <div className="page-title">
-              <div className="page-kicker">Community library tracker</div>
-              <h2>BA Reading Community Tracker</h2>
-              <p>Share books, discover reads across the capability, manage approvals, and track returns without spreadsheet drift.</p>
-            </div>
-            <div className="actions">
-              <button className="btn primary" onClick={() => setBookModal({ ...blankBook })}><Plus size={17} /> Add book</button>
-              <button className="btn" onClick={refresh}><RotateCcw size={17} /> Refresh</button>
-            </div>
-          </section>
-        )}
+        <section className="topbar">
+          <div className="page-title">
+            <div className="page-kicker">Community library tracker</div>
+            <h2>BA Reading Community Tracker</h2>
+            <p>Share books, discover reads across the capability, manage approvals, and track returns without spreadsheet drift.</p>
+          </div>
+          <div className="actions">
+            <button className="btn primary" onClick={() => setBookModal({ ...blankBook })}><Plus size={17} /> Add book</button>
+            
+            {/* <button className="btn" onClick={refresh}><RotateCcw size={17} /> Refresh</button> */}
+            <button className="btn icon-only" onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+          </div>
+        </section>
         {view === "home" && (
           <HomePage
             stats={stats}
             dailyThought={dailyThought}
             setView={setView}
             setFilters={setFilters}
+            setBookModal={setBookModal}
           />
         )}
         {loading && !["catalog", "home"].includes(view) && <div className="panel empty">Loading Book Nook...</div>}
@@ -346,6 +357,7 @@ useEffect(() => {
             me={me}
             openDetails={openDetails}
             setRequestModal={setRequestModal}
+            setBookModal={setBookModal}
             returnBook={returnBook}
           />
         )}
@@ -360,6 +372,7 @@ useEffect(() => {
             onPageChange={(p) => loadBookHistory(selectedBook.id, p)}
             me={me}
             setView={setView}
+            setBookModal={setBookModal}
             setRequestModal={setRequestModal}
             returnBook={returnBook}
           />

@@ -32,7 +32,7 @@ export function Pagination({ page, totalPages, totalElements, onPageChange }) {
   return (
     <div className="pagination">
       <div className="pagination-info">
-         ({totalElements} total items)
+        Showing page {page + 1} of {totalPages} ({totalElements} total items)
       </div>
       <div className="pagination-controls">
         <button

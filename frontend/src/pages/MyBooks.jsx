@@ -19,7 +19,6 @@ export function MyBooks({ page, onPageChange, setBookModal, deleteBook, openDeta
     );
   }
   return (
-    <>
     <Panel title="My Shelf" badge={`${page.totalElements} records`}>
       <Table headers={["Book", "Genre", "Status", "Actions"]}>
         {page.content.map((book) => (
@@ -37,6 +36,5 @@ export function MyBooks({ page, onPageChange, setBookModal, deleteBook, openDeta
       </Table>
       <Pagination page={page.page} totalPages={page.totalPages} totalElements={page.totalElements} onPageChange={onPageChange} />
     </Panel>
-    </>
   );
 }
