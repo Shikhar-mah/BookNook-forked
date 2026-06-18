@@ -4,21 +4,53 @@ import { FormInput } from "./common/FormInput";
 import { validateRequestForm } from "../utils/helpers";
 
 export function RequestModal({ book, onClose, onSave }) {
-  const [form, setForm] = useState({ bookId: book.id, requestedLoanDays: book.defaultLoanDays, requestedPickupLocation: book.exchangeLocation, borrowerNote: "" });
+  if (!book) return null;
+
+  const [form, setForm] = useState({
+    bookId: book.id,
+    requestedLoanDays: String(book.defaultLoanDays || 14),
+    borrowerNote: ""
+  });
+
   const [errors, setErrors] = useState({});
+
   function submit() {
-    const nextErrors = validateRequestForm(form);
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length === 0) onSave({
+    const cleanedForm = {
       ...form,
-      requestedLoanDays: Number(form.requestedLoanDays),
+      requestedLoanDays: parseInt(form.requestedLoanDays, 10),
       borrowerNote: form.borrowerNote?.trim() || ""
-    });
+    };
+
+    const nextErrors = validateRequestForm(cleanedForm);
+    setErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length === 0) {
+      onSave(cleanedForm);
+    }
   }
+
   return (
     <Modal title={`Request: ${book.title}`} onClose={onClose} onSubmit={submit}>
-      <FormInput label="Borrow for days" required error={errors.requestedLoanDays} type="number" value={form.requestedLoanDays} onChange={(v) => setForm({ ...form, requestedLoanDays: v.replace(/^0+(?!$)/, "") })} />
-      <label className="field full"><span>Note to owner</span><textarea className="textarea" value={form.borrowerNote} onChange={(e) => setForm({ ...form, borrowerNote: e.target.value })} /></label>
+      <FormInput
+        label="Borrow for days"
+        required
+        error={errors.requestedLoanDays}
+        type="number"
+        value={form.requestedLoanDays}
+        onChange={(v) => {
+          const onlyInteger = v.replace(/\D/g, "");
+          setForm({ ...form, requestedLoanDays: onlyInteger });
+        }}
+      />
+
+      <label className="field full">
+        <span>Note to owner</span>
+        <textarea
+          className="textarea"
+          value={form.borrowerNote}
+          onChange={(e) => setForm({ ...form, borrowerNote: e.target.value })}
+        />
+      </label>
     </Modal>
   );
 }

@@ -16,16 +16,18 @@ export function validateBookForm(form) {
   if (!form.title?.trim()) errors.title = "Title is required.";
   if (!form.author?.trim()) errors.author = "Author is required.";
   if (!form.genreId) errors.genreId = "Genre is required.";
-  if (!Number.isFinite(Number(form.defaultLoanDays)) || Number(form.defaultLoanDays) < 3 || Number(form.defaultLoanDays) > 60) {
-    errors.defaultLoanDays = "Default loan days must be between 3 and 60.";
+  const loanDays = Number(form.defaultLoanDays);
+  if (!Number.isInteger(loanDays) || loanDays < 3 || loanDays > 60) {
+    errors.defaultLoanDays = "Default loan days must be an integer between 3 and 60.";
   }
   return errors;
 }
 
 export function validateRequestForm(form) {
   const errors = {};
-  if (!Number.isFinite(Number(form.requestedLoanDays)) || Number(form.requestedLoanDays) < 3 || Number(form.requestedLoanDays) > 60) {
-    errors.requestedLoanDays = "Borrow days must be between 3 and 60.";
+  const loanDays = Number(form.requestedLoanDays);
+  if (!Number.isInteger(loanDays) || loanDays < 3 || loanDays > 60) {
+    errors.requestedLoanDays = "Borrow days must be an integer between 3 and 60.";
   }
   return errors;
 }

@@ -4,6 +4,7 @@ import { FormInput } from "./common/FormInput";
 import { validateBookForm } from "../utils/helpers";
 
 export function BookModal({ book, genres, onClose, onSave }) {
+  if (!book) return null;
   const [form, setForm] = useState({ ...book, genreId: book.genreId || book.genre?.id || genres[0]?.id || "" });
   const [errors, setErrors] = useState({});
   function submit() {
@@ -11,7 +12,7 @@ export function BookModal({ book, genres, onClose, onSave }) {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length === 0) onSave({
       ...form,
-      defaultLoanDays: Number(form.defaultLoanDays),
+      defaultLoanDays: Math.floor(Number(form.defaultLoanDays)),
       title: form.title.trim(),
       author: form.author.trim(),
       description: form.description?.trim() || "",
@@ -24,7 +25,14 @@ export function BookModal({ book, genres, onClose, onSave }) {
       <FormInput label="Author" required error={errors.author} value={form.author} onChange={(v) => setForm({ ...form, author: v })} />
       <label className="field"><span>Genre <b>*</b></span><select className="select" value={form.genreId} onChange={(e) => setForm({ ...form, genreId: e.target.value })}>{genres.map((genre) => <option key={genre.id} value={genre.id}>{genre.name}</option>)}</select>{errors.genreId && <small>{errors.genreId}</small>}</label>
       <label className="field"><span>Condition <b>*</b></span><select className="select" value={form.condition} onChange={(e) => setForm({ ...form, condition: e.target.value })}><option value="like_new">Like new</option><option value="good">Good</option><option value="well_loved">Well loved</option><option value="damaged">Damaged</option></select></label>
-      <FormInput label="Default loan days" required error={errors.defaultLoanDays} type="number" value={form.defaultLoanDays} onChange={(v) => setForm({ ...form, defaultLoanDays: v.replace(/^0+(?!$)/, "") })} />
+      <FormInput 
+        label="Default loan days" 
+        required 
+        error={errors.defaultLoanDays} 
+        type="number" 
+        value={form.defaultLoanDays} 
+        onChange={(v) => setForm({ ...form, defaultLoanDays: v.replace(/^0+(?!$)/, "").replace(/[^0-9]/g, "") })} 
+      />
       <FormInput label="Cover image URL" value={form.coverUrl} onChange={(v) => setForm({ ...form, coverUrl: v })} />
       <label className="field full"><span>Description</span><textarea className="textarea" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />{errors.description && <small>{errors.description}</small>}</label>
     </Modal>

@@ -3,21 +3,14 @@ import prisma from "../config/prisma";
 export class WorkflowService {
   static async myRequests(userId: string, isAdmin: boolean, page = 0, size = 20) {
     const where = isAdmin ? {} : {
-      OR: [
-        { ownerId: userId },
-        { requesterId: userId },
-      ]
+      OR: [{ ownerId: userId }, { requesterId: userId }]
     };
 
     const [totalElements, content] = await Promise.all([
       prisma.borrowRequest.count({ where }),
       prisma.borrowRequest.findMany({
         where,
-        include: {
-          book: true,
-          requester: true,
-          owner: true,
-        },
+        include: { book: true, requester: true, owner: true },
         orderBy: { requestedAt: "desc" },
         skip: page * size,
         take: size,
@@ -65,10 +58,7 @@ export class WorkflowService {
 
   static async history(userId: string, isAdmin: boolean, page = 0, size = 20) {
     const where = isAdmin ? {} : {
-      OR: [
-        { borrowerId: userId },
-        { ownerId: userId },
-      ]
+      OR: [{ borrowerId: userId }, { ownerId: userId }]
     };
 
     const [totalElements, content] = await Promise.all([
@@ -96,6 +86,12 @@ export class WorkflowService {
   }
 
   static async requestBook(userId: string, payload: any) {
+    const requestedLoanDays = parseInt(payload.requestedLoanDays, 10);
+
+    if (!Number.isInteger(requestedLoanDays) || requestedLoanDays < 1) {
+      throw new Error("Borrow days must be a whole number.");
+    }
+
     const book = await prisma.book.findUnique({
       where: { id: payload.bookId },
       include: { owner: true },
@@ -113,11 +109,15 @@ export class WorkflowService {
           requesterId: userId,
           ownerId: book.ownerId,
           status: "pending",
-          requestedLoanDays: payload.requestedLoanDays || 14,
+          requestedLoanDays,
           borrowerNote: payload.borrowerNote,
           requestedAt: new Date(),
         },
-        include: { requester: true, book: true },
+        include: {
+          requester: true,
+          book: true,
+          owner: true,
+        },
       });
 
       await tx.book.update({
@@ -158,6 +158,7 @@ export class WorkflowService {
         status: { in: ["active", "overdue", "return_pending"] },
       },
     });
+
     if (activeLoan) throw new Error("This book is already borrowed.");
 
     const now = new Date();
@@ -180,7 +181,7 @@ export class WorkflowService {
           ownerId: request.ownerId,
           status: "active",
           borrowedAt: now,
-          dueAt: dueAt,
+          dueAt,
           returnConfirmedByOwner: false,
         },
         include: { book: { include: { owner: true } }, borrower: true, owner: true },
@@ -191,7 +192,6 @@ export class WorkflowService {
         data: { availabilityStatus: "borrowed" },
       });
 
-      // Expire other pending requests for the same book
       await tx.borrowRequest.updateMany({
         where: {
           bookId: request.bookId,
@@ -257,6 +257,7 @@ export class WorkflowService {
       const pendingCount = await tx.borrowRequest.count({
         where: { bookId: request.bookId, status: "pending" },
       });
+
       const activeLoanCount = await tx.loan.count({
         where: {
           bookId: request.bookId,
@@ -299,9 +300,8 @@ export class WorkflowService {
       throw new Error("Unauthorized.");
     }
 
-    // Simple status check, effective status logic can be added if needed
     if (!["active", "overdue"].includes(loan.status)) {
-       throw new Error("This loan cannot be returned.");
+      throw new Error("This loan cannot be returned.");
     }
 
     const updatedLoan = await prisma.$transaction(async (tx) => {
