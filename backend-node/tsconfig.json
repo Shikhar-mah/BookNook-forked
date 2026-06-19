@@ -3,8 +3,8 @@
     "rootDir": "./src",
     "outDir": "./dist",
 
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "Node16",
+    "moduleResolution": "node16",
     "target": "es2020",
     "lib": ["es2020"],
     "types": ["node"],
@@ -17,14 +17,12 @@
 
     "sourceMap": true,
     "declaration": false,
-    "declarationMap": false,
 
     "noUncheckedIndexedAccess": false,
     "exactOptionalPropertyTypes": false,
 
     "verbatimModuleSyntax": false,
     "isolatedModules": false,
-    "noUncheckedSideEffectImports": false,
     "moduleDetection": "auto"
   },
   "include": ["src"]
