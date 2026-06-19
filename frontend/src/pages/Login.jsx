@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { LogIn, UserPlus } from "lucide-react";
 import { api } from "../api";
+import logo from "../styles/blue_altair_logo-removebg-preview.png";
 export function Login({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
   const [form, setForm] = useState({
@@ -36,7 +37,7 @@ export function Login({ onLogin }) {
     <div className="login-page">
       <div className="login-card">
         <div className="brand-large">
-          <div className="brand-mark">BN</div>
+          <img className ="brand-mark"  src={logo} alt="Book Nook Logo" />
           <h1>Book Nook</h1>
         </div>
         <h2>{isRegister ? "Create an account" : "Sign in to your account"}</h2>

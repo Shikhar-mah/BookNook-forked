@@ -980,7 +980,7 @@ tr:last-child td { border-bottom: 0; }
 .brand-large .brand-mark {
   width: 48px;
   height: 48px;
-  background: var(--brand-dark);
+  background: transparent;
   color: white;
   display: flex;
   align-items: center;
