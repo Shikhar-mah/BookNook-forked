@@ -4,6 +4,23 @@ import { BookService } from "../services/book.service";
 import { WorkflowService } from "../services/workflow.service";
 import { LookupService } from "../services/lookup.service";
 
+function paramString(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0] ?? "";
+  if (!value) throw new Error("Missing required route parameter");
+  return value;
+}
+
+function queryString(value: unknown): string {
+  if (Array.isArray(value)) return String(value[0] ?? "");
+  if (value == null) return "";
+  return String(value);
+}
+
+function queryNumber(value: unknown, fallback: number): number {
+  const parsed = parseInt(queryString(value), 10);
+  return Number.isNaN(parsed) ? fallback : parsed;
+}
+
 export class AppController {
   static async me(req: AuthRequest, res: Response) {
     const { password, ...userWithoutPassword } = req.user;
@@ -13,14 +30,16 @@ export class AppController {
   static async catalog(req: AuthRequest, res: Response) {
     try {
       const { search, genreId, availability, sort, page, size } = req.query;
+
       const result = await BookService.catalog({
-        search: search as string,
-        genreId: genreId as string,
-        availability: availability as string,
-        sort: sort as string,
-        page: parseInt(page as string) || 0,
-        size: parseInt(size as string) || 20,
+        search: queryString(search),
+        genreId: queryString(genreId),
+        availability: queryString(availability),
+        sort: queryString(sort),
+        page: queryNumber(page, 0),
+        size: queryNumber(size, 20),
       });
+
       res.json(result);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -30,11 +49,13 @@ export class AppController {
   static async myBooks(req: AuthRequest, res: Response) {
     try {
       const { page, size } = req.query;
+
       const result = await BookService.myBooks(
         req.user.id,
-        parseInt(page as string) || 0,
-        parseInt(size as string) || 20
+        queryNumber(page, 0),
+        queryNumber(size, 20)
       );
+
       res.json(result);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -43,7 +64,7 @@ export class AppController {
 
   static async getBook(req: AuthRequest, res: Response) {
     try {
-      const result = await BookService.get(req.params.id);
+      const result = await BookService.get(paramString(req.params.id));
       res.json(result);
     } catch (error: any) {
       res.status(404).json({ message: error.message });
@@ -63,10 +84,11 @@ export class AppController {
     try {
       const result = await BookService.update(
         req.user.id,
-        req.params.id,
+        paramString(req.params.id),
         req.body,
         req.user.role === "ADMIN"
       );
+
       res.json(result);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -75,7 +97,12 @@ export class AppController {
 
   static async deleteBook(req: AuthRequest, res: Response) {
     try {
-      await BookService.delete(req.user.id, req.params.id, req.user.role === "ADMIN");
+      await BookService.delete(
+        req.user.id,
+        paramString(req.params.id),
+        req.user.role === "ADMIN"
+      );
+
       res.status(204).send();
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -85,12 +112,14 @@ export class AppController {
   static async myRequests(req: AuthRequest, res: Response) {
     try {
       const { page, size } = req.query;
+
       const result = await WorkflowService.myRequests(
         req.user.id,
         req.user.role === "ADMIN",
-        parseInt(page as string) || 0,
-        parseInt(size as string) || 20
+        queryNumber(page, 0),
+        queryNumber(size, 20)
       );
+
       res.json(result);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -110,9 +139,10 @@ export class AppController {
     try {
       const result = await WorkflowService.approve(
         req.user.id,
-        req.params.id,
+        paramString(req.params.id),
         req.user.role === "ADMIN"
       );
+
       res.json(result);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -123,9 +153,10 @@ export class AppController {
     try {
       const result = await WorkflowService.reject(
         req.user.id,
-        req.params.id,
+        paramString(req.params.id),
         req.user.role === "ADMIN"
       );
+
       res.json(result);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -135,11 +166,13 @@ export class AppController {
   static async borrowed(req: AuthRequest, res: Response) {
     try {
       const { page, size } = req.query;
+
       const result = await WorkflowService.borrowed(
         req.user.id,
-        parseInt(page as string) || 0,
-        parseInt(size as string) || 20
+        queryNumber(page, 0),
+        queryNumber(size, 20)
       );
+
       res.json(result);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -149,12 +182,14 @@ export class AppController {
   static async loanHistory(req: AuthRequest, res: Response) {
     try {
       const { page, size } = req.query;
+
       const result = await WorkflowService.history(
         req.user.id,
         req.user.role === "ADMIN",
-        parseInt(page as string) || 0,
-        parseInt(size as string) || 20
+        queryNumber(page, 0),
+        queryNumber(size, 20)
       );
+
       res.json(result);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -165,9 +200,10 @@ export class AppController {
     try {
       const result = await WorkflowService.returnBook(
         req.user.id,
-        req.params.id,
+        paramString(req.params.id),
         req.user.role === "ADMIN"
       );
+
       res.json(result);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -195,11 +231,13 @@ export class AppController {
   static async bookHistory(req: AuthRequest, res: Response) {
     try {
       const { page, size } = req.query;
+
       const result = await LookupService.bookHistory(
-        req.params.id,
-        parseInt(page as string) || 0,
-        parseInt(size as string) || 20
+        paramString(req.params.id),
+        queryNumber(page, 0),
+        queryNumber(size, 20)
       );
+
       res.json(result);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
