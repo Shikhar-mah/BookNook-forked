@@ -89,13 +89,12 @@ button { cursor: pointer; }
   color: inherit;
 }
 .brand-mark {
-  width: 40px;
-  height: 40px;
-  background: var(--brand);
-  color: white;
-  font-weight: 900;
-  font-size: 15px;
-  
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
 }
 .brand-logo {
   width: 56px;

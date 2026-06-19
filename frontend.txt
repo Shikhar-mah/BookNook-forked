@@ -1,4 +1,5 @@
 <directory_structure>
+Dockerfile
 index.html
 package.json
 src/api/index.js
@@ -21,16 +22,40 @@ src/main.jsx
 src/pages/Borrowed.jsx
 src/pages/Catalog.jsx
 src/pages/Details.jsx
+src/pages/Home.jsx
 src/pages/LoanHistory.jsx
 src/pages/Login.jsx
 src/pages/MyBooks.jsx
 src/pages/Requests.jsx
+src/styles/blue_altair_logo-removebg-preview.png
 src/styles/main.css
 src/utils/helpers.js
 </directory_structure>
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="Dockerfile">
+# Build Stage
+FROM node:20-alpine AS builder
+WORKDIR /app
+# Copy package files
+COPY package*.json ./
+# Install dependencies
+RUN npm install
+# Copy source code
+COPY . .
+# Build the application
+RUN npm run build
+# Production Stage
+FROM nginx:alpine
+# Copy built files
+COPY --from=builder /app/dist /usr/share/nginx/html
+# Expose port
+EXPOSE 80
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
+</file>
 
 <file path="src/api/index.js">
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
@@ -78,7 +103,10 @@ export const api = {
   me: () => request("/me"),
   dashboard: () => request("/dashboard"),
   genres: () => request("/genres"),
-  books: (params) => request(`/books?${new URLSearchParams(params)}`),
+  books: (params) => {
+    const query = new URLSearchParams({ size: 20, ...params });
+    return request(`/books?${query}`);
+  },
   myBooks: (page = 0, size = 20) => request(`/books/mine?page=${page}&size=${size}`),
   book: (id) => request(`/books/${id}`),
   bookHistory: (id, page = 0, size = 20) => request(`/books/${id}/history?page=${page}&size=${size}`),
@@ -100,6 +128,7 @@ import React, { useEffect, useState } from "react";
 import {
   BookOpen,
   CheckSquare,
+  Home as HomeIcon,
   History,
   LibraryBig,
   LogOut,
@@ -107,7 +136,10 @@ import {
   Plus,
   RotateCcw,
   Sun,
-  Undo2
+  Undo2,
+  Search,
+  User as UserIcon,
+  ChevronDown
 } from "lucide-react";
 import { api } from "./api";
 import { Profile } from "./components/Profile";
@@ -122,7 +154,8 @@ import { MyBooks } from "./pages/MyBooks";
 import { Borrowed } from "./pages/Borrowed";
 import { LoanHistory } from "./pages/LoanHistory";
 import { Details } from "./pages/Details";
-import axios from "axios";
+import { initials } from "./utils/helpers";
+import logo from "./styles/blue_altair_logo-removebg-preview.png";
 const blankBook = {
   title: "",
   author: "",
@@ -132,9 +165,42 @@ const blankBook = {
   description: "",
   coverUrl: ""
 };
+function HomePage({ stats, dailyThought, setView, setFilters, setBookModal }) {
+  return (
+    <section className="home-page">
+      <div className="home-hero panel">
+        <div>
+          <div className="page-kicker">Community library tracker</div>
+          <h2>Find your next read from the BA shelf.</h2>
+          <p>Browse available books, share your own shelf, request a copy, and track every return in one simple place.</p>
+          <div className="home-actions">
+            <button className="btn primary" onClick={() => setView("catalog")}>Browse books</button>
+            <button className="btn" onClick={() => setBookModal({ ...blankBook })}>Add book</button>
+          </div>
+        </div>
+        {dailyThought && (
+          <div className="quote-card hero-quote">
+            <div className="quote-label">📖 Daily Thought</div>
+            <blockquote className="quote-text">“{dailyThought.quote}”</blockquote>
+            <div className="quote-author">— {dailyThought.author}</div>
+          </div>
+        )}
+      </div>
+      {stats && <Stats stats={stats} setView={setView} setFilters={setFilters} />}
+      <section className="how-it-works panel">
+        <div className="panel-head"><h3>How it works</h3></div>
+        <div className="steps-grid">
+          <article><span>1</span><h4>Browse</h4><p>Search the shared shelf and filter books by genre, status, or due date.</p></article>
+          <article><span>2</span><h4>Request</h4><p>Send a borrow request with your preferred number of reading days.</p></article>
+          <article><span>3</span><h4>Read & return</h4><p>Track active loans and mark books returned when you are done.</p></article>
+        </div>
+      </section>
+    </section>
+  );
+}
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem("bn_token"));
-  const [view, setView] = useState("catalog");
+  const [view, setView] = useState("home");
   const [darkMode, setDarkMode] = useState(localStorage.getItem("bn_theme") === "dark");
   const [me, setMe] = useState(null);
   const [stats, setStats] = useState(null);
@@ -153,21 +219,19 @@ export default function App() {
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dailyThought, setDailyThought] = useState(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
     localStorage.setItem("bn_theme", darkMode ? "dark" : "light");
   }, [darkMode]);
-useEffect(() => {
-  axios
-    .get("http://localhost:8080/api/quote/today")
-    .then((response) => {
-      setDailyThought(response.data);
-      console.log(response);
-    })
-    .catch((error) => {
-      console.log(error);
-    });
-}, []);
+  useEffect(() => {
+    fetch("http://localhost:8080/api/quote/today")
+      .then((response) => response.ok ? response.json() : null)
+      .then((quote) => {
+        if (quote) setDailyThought(quote);
+      })
+      .catch(() => { });
+  }, []);
   useEffect(() => {
     if (isAuthenticated) {
       loadBootstrap();
@@ -189,13 +253,15 @@ useEffect(() => {
     setMe(user);
     setIsAuthenticated(true);
     notify("Welcome back, " + user.fullName + "!");
+    setView("home");
   }
   function handleLogout() {
-    localStorage.removeItem("bn_token");
-    setIsAuthenticated(false);
-    setMe(null);
-    notify("Logged out successfully.");
-  }
+  setShowProfileDropdown(false);
+  localStorage.removeItem("bn_token");
+  setIsAuthenticated(false);
+  setMe(null);
+  notify("Logged out successfully.");
+}
   async function loadBootstrap() {
     try {
       setLoading(true);
@@ -227,7 +293,8 @@ useEffect(() => {
         search: filters.search,
         availability: filters.availability,
         sort: filters.sort,
-        page: filters.page
+        page: filters.page,
+        size: 20
       };
       if (filters.genreId) params.genreId = filters.genreId;
       setBooksPage(await api.books(params));
@@ -328,14 +395,15 @@ useEffect(() => {
     {
       label: "Discovery",
       items: [
-        ["catalog", "Catalog", BookOpen]
+        ["home", "Home", HomeIcon],
+        ["catalog", "Browse", BookOpen]
       ]
     },
     {
       label: "Your Activity",
       items: [
         ["requests", "Requests", CheckSquare, stats?.pendingApprovals],
-        ["myBooks", "My Books", LibraryBig],
+        ["myBooks", "My Shelf", LibraryBig],
         ["borrowed", "Currently Reading", Undo2, stats?.activeBorrowed],
         ["history", "History", History]
       ]
@@ -353,13 +421,12 @@ useEffect(() => {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">BN</div>
+          <img className ="brand-mark"  src={logo} alt="Book Nook Logo" />
           <div>
             <h1>Book Nook</h1>
             <p>BA reading community</p>
           </div>
         </div>
-        {me && <Profile user={me} />}
         <nav className="nav">
           {navSections.map((section) => (
             <div key={section.label} className="nav-section">
@@ -376,8 +443,9 @@ useEffect(() => {
             </div>
           ))}
         </nav>
-        <div className="sidebar-footer">
-          <button className="logout-btn" onClick={handleLogout}>
+        <div className="top-nav-actions">
+          {me && <Profile user={me} />}
+          <button className="logout-btn" onClick={handleLogout} title="Sign Out">
             <LogOut size={18} />
             <span>Sign Out</span>
           </button>
@@ -392,25 +460,48 @@ useEffect(() => {
           </div>
           <div className="actions">
             <button className="btn primary" onClick={() => setBookModal({ ...blankBook })}><Plus size={17} /> Add book</button>
-            <button className="btn" onClick={refresh}><RotateCcw size={17} /> Refresh</button>
+            {}
             <button className="btn icon-only" onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
+            <div className="profile-dropdown-container" style={{ position: "relative" }}>
+              <button className="user-profile-trigger" onClick={() => setShowProfileDropdown(!showProfileDropdown)}>
+                <div className="user-avatar-small">
+                  {me ? (me.avatarInitials || initials(me.fullName)) : "?"}
+                </div>
+                <ChevronDown size={14} color="var(--muted)" />
+              </button>
+              {showProfileDropdown && (
+                <div className="card" style={{
+                  position: "absolute",
+                  top: "100%",
+                  right: 0,
+                  marginTop: "8px",
+                  minWidth: "240px",
+                  zIndex: 200,
+                  padding: "16px"
+                }}>
+                  {me && <Profile user={me} />}
+                  <hr style={{ margin: "16px 0", border: "0", borderTop: "1px solid var(--line)" }} />
+                  <button className="logout-btn" onClick={handleLogout}>
+                    <LogOut size={18} />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </section>
-          {dailyThought && (
-  <div className="quote-card">
-    <div className="quote-label">📖 Daily Thought</div>
-    <blockquote className="quote-text">
-      "{dailyThought.quote}"
-    </blockquote>
-    <div className="quote-author">
-      — {dailyThought.author}
-    </div>
-  </div>
-)}
-        {stats && <Stats stats={stats} setView={setView} setFilters={setFilters} />}
-        {loading && view !== "catalog" && <div className="panel empty">Loading Book Nook...</div>}
+        {view === "home" && (
+          <HomePage
+            stats={stats}
+            dailyThought={dailyThought}
+            setView={setView}
+            setFilters={setFilters}
+            setBookModal={setBookModal}
+          />
+        )}
+        {loading && !["catalog", "home"].includes(view) && <div className="panel empty">Loading Book Nook...</div>}
         {view === "catalog" && (
           <Catalog
             page={booksPage}
@@ -489,9 +580,9 @@ export function BookCard({ book, me, openDetails, setRequestModal, setBookModal,
           <span><strong>Duration:</strong> {book.defaultLoanDays} days{book.dueAt ? `, due ${dateText(book.dueAt)}` : ""}</span>
         </div>
         <div className="card-actions">
-          <button className="btn" onClick={() => openDetails(book)}>Details</button>
-          {!ownedByMe && book.availabilityStatus === "available" && <button className="btn primary" onClick={() => setRequestModal(book)}>Request</button>}
-          {(ownedByMe || isAdmin) && <button className="btn" onClick={() => setBookModal(toBookForm(book))}>Edit</button>}
+          <button className="btn btn-outline" onClick={() => openDetails(book)}>Details</button>
+          {!ownedByMe && book.availabilityStatus === "available" && <button className="btn btn-primary" onClick={() => setRequestModal(book)}>Request</button>}
+          {(ownedByMe || isAdmin) && <button className="btn btn-outline" onClick={() => setBookModal(toBookForm(book))}>Edit</button>}
           {borrowedByMe && <button className="btn warn" onClick={() => returnBook(book.activeLoanId)}>Return</button>}
         </div>
       </div>
@@ -849,28 +940,28 @@ import React from "react";
 import { Stat } from "./common/Stat";
 export function Stats({ stats, setView, setFilters }) {
   return (
-    <section className="grid stats">
-      <Stat
-        label="Books listed"
-        value={stats.totalBooks}
-        onClick={() => { setView("catalog"); setFilters(f => ({ ...f, availability: "all" })); }}
-      />
-      <Stat
-        label="Available now"
-        value={stats.availableBooks}
-        onClick={() => { setView("catalog"); setFilters(f => ({ ...f, availability: "available" })); }}
-      />
-      <Stat
-        label="Pending approvals"
-        value={stats.pendingRequests}
-        onClick={() => setView("requests")}
-      />
-      <Stat
-        label="Currently reading"
-        value={stats.pendingRequests}
-        onClick={() => setView("borrowed")}
-      />
-    </section>
+    <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+      <section className="stats">
+        <Stat
+          label="Books on the shelf"
+          value={stats.totalBooks}
+          onClick={() => {
+            setView("catalog");
+            setFilters((f) => ({ ...f, availability: "all" }));
+          }}
+        />
+        <Stat
+          label="Available to borrow"
+          value={stats.availableBooks}
+          onClick={() => {
+            setView("catalog");
+            setFilters((f) => ({ ...f, availability: "available" }));
+          }}
+        />
+        {
+}
+      </section>
+    </div>
   );
 }
 </file>
@@ -935,6 +1026,13 @@ export function Catalog({
 }) {
   return (
     <section>
+      <div className="section-heading">
+        <div>
+          <p className="page-kicker">Browse</p>
+          <h3>Books on the shelf</h3>
+        </div>
+        <span className="chip">20 per page</span>
+      </div>
       <div className="toolbar">
         <div className="search-wrap">
           <Search size={17} />
@@ -1020,7 +1118,7 @@ export function Details({ book, historyPage, onPageChange, me, setView, setBookM
       </div>
       <div className="panel detail-panel">
         <div className="flex-between">
-          <button className="btn" onClick={() => setView("catalog")}>Back to catalog</button>
+          <button className="btn" onClick={() => setView("catalog")}>Back to browse</button>
           {isAdmin && <span className="admin-badge">Admin Mode</span>}
         </div>
         <h3>{book.title}</h3>
@@ -1051,6 +1149,93 @@ export function Details({ book, historyPage, onPageChange, me, setView, setBookM
     </div>
   );
 }
+</file>
+
+<file path="src/pages/Home.jsx">
+import React from "react";
+import { BookOpen, Plus, ArrowRight } from "lucide-react";
+export const Home = ({ stats, setView, setBookModal }) => {
+  return (
+    <div className="home-page">
+      <section className="hero-section">
+        <div className="hero-content">
+          <div className="hero-badge">
+            <span>✦</span>
+            <span>A reading community</span>
+          </div>
+          <h1 className="hero-title">
+            Borrow a book. <span>Pass it on.</span>
+          </h1>
+          <p className="hero-description">
+            Book Nook is a shared shelf for our team. List a book you'd
+            lend, borrow one you've been meaning to read, and swap stories
+            along the way.
+          </p>
+          <div className="hero-actions">
+            <button
+              className="btn btn-primary"
+              onClick={() => setView("catalog")}
+            >
+              Browse the shelf
+              <BookOpen size={18} />
+            </button>
+            <button
+              className="btn btn-outline"
+              onClick={() => setBookModal({
+                title: "",
+                author: "",
+                genreId: "",
+                condition: "good",
+                defaultLoanDays: 14,
+                description: "",
+                coverUrl: ""
+              })}
+            >
+              Lend a book
+              <Plus size={18} />
+            </button>
+          </div>
+          <div className="home-stats">
+            <div className="home-stat-card">
+              <label>Books on the shelf</label>
+              <strong>{stats?.totalBooks || 0}</strong>
+            </div>
+            <div className="home-stat-card">
+              <label>Available to borrow</label>
+              <strong>{stats?.availableBooks || 0}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className="how-it-works">
+        <h2 className="section-title">How it works</h2>
+        <div className="steps-grid">
+          <div className="step-card">
+            <div className="step-number">01</div>
+            <h3 className="step-title">List a book</h3>
+            <p className="step-description">
+              Add a book you own and are happy to lend. Takes 30 seconds.
+            </p>
+          </div>
+          <div className="step-card">
+            <div className="step-number">02</div>
+            <h3 className="step-title">Request to borrow</h3>
+            <p className="step-description">
+              Find a title you love and send a quick request to the owner.
+            </p>
+          </div>
+          <div className="step-card">
+            <div className="step-number">03</div>
+            <h3 className="step-title">Read & return</h3>
+            <p className="step-description">
+              Enjoy the read, then return it so the next reader can dive in.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
 </file>
 
 <file path="src/pages/LoanHistory.jsx">
@@ -1213,7 +1398,7 @@ import { label, toBookForm } from "../utils/helpers";
 export function MyBooks({ page, onPageChange, setBookModal, deleteBook, openDetails }) {
   if (page.content.length === 0) {
     return (
-      <Panel title="My Shared Books">
+      <Panel title="My Shelf">
         <EmptyState
           icon="BookPlus"
           title="Your library is empty"
@@ -1225,7 +1410,7 @@ export function MyBooks({ page, onPageChange, setBookModal, deleteBook, openDeta
     );
   }
   return (
-    <Panel title="My Shared Books" badge={`${page.totalElements} records`}>
+    <Panel title="My Shelf" badge={`${page.totalElements} records`}>
       <Table headers={["Book", "Genre", "Status", "Actions"]}>
         {page.content.map((book) => (
           <tr key={book.id}>
@@ -1291,36 +1476,36 @@ export function Requests({ page, onPageChange, me, approve, reject, openDetails 
 
 <file path="src/styles/main.css">
 :root {
-  --ink: #16202a;
-  --muted: #66717f;
-  --line: #e6ebf0;
+  --ink: #1e293b;
+  --muted: #64748b;
+  --line: #e2e8f0;
   --panel: #ffffff;
-  --bg: #f4f6f8;
-  --brand: #16756f;
-  --brand-dark: #0f5954;
-  --brand-soft: #e2f6f2;
-  --accent: #a66a18;
-  --danger: #b42318;
-  --focus: #2563eb;
-  --shadow: 0 20px 60px rgba(22, 32, 42, 0.09);
-  --shadow-sm: 0 8px 26px rgba(22, 32, 42, 0.055);
-  --sidebar-bg: rgba(255, 255, 255, 0.94);
-  --card-bg: rgba(255, 255, 255, 0.96);
+  --bg: #FDFBF7;
+  --brand: #667FFF;
+  --brand-dark: #5566E6;
+  --brand-soft: #EEF2FF;
+  --accent: #f59e0b;
+  --danger: #ef4444;
+  --focus: #667FFF;
+  --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --nav-bg: rgba(255, 255, 255, 0.8);
+  --card-bg: #ffffff;
   --input-bg: #ffffff;
 }
 [data-theme='dark'] {
-  --ink: #f1f5f9;
+  --ink: #f8fafc;
   --muted: #94a3b8;
   --line: #334155;
   --panel: #1e293b;
   --bg: #0f172a;
-  --brand: #2dd4bf;
-  --brand-dark: #14b8a6;
-  --brand-soft: rgba(45, 212, 191, 0.1);
-  --accent: #f59e0b;
-  --shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-  --shadow-sm: 0 8px 26px rgba(0, 0, 0, 0.2);
-  --sidebar-bg: rgba(15, 23, 42, 0.94);
+  --brand: #818CF8;
+  --brand-dark: #6366F1;
+  --brand-soft: rgba(99, 102, 241, 0.1);
+  --accent: #fbbf24;
+  --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  --nav-bg: rgba(30, 41, 59, 0.8);
   --card-bg: #1e293b;
   --input-bg: #0f172a;
 }
@@ -1330,8 +1515,8 @@ body {
   min-height: 100vh;
   color: var(--ink);
   background: var(--bg);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  letter-spacing: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
   transition: background 0.3s ease, color 0.3s ease;
 }
 [data-theme='light'] body {
@@ -1350,45 +1535,48 @@ body {
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 .app-shell {
-  display: grid;
-  grid-template-columns: 272px 1fr;
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
 }
 .sidebar {
   position: sticky;
   top: 0;
+  z-index: 100;
+  background: var(--nav-bg);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+  height: 72px;
+}
+.header-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 100%;
   display: flex;
-  flex-direction: column;
-  height: 100vh;
-  padding: 16px 14px;
-  overflow: hidden;
-  color: var(--ink);
-  background: var(--sidebar-bg);
-  border-right: 1px solid var(--line);
-  box-shadow: 10px 0 40px rgba(0, 0, 0, 0.02);
-  backdrop-filter: blur(20px);
-  transition: all 0.3s ease;
-  z-index: 50;
-  font-size: 13.5px;
+  align-items: center;
+  justify-content: space-between;
 }
 .brand {
-  flex-shrink: 0;
   display: flex;
-  gap: 10px;
   align-items: center;
-  padding: 0 4px 12px;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
 }
 .brand-mark {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 9px;
-  color: white;
-  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
-  font-weight: 900;
-  font-size: 15px;
-  box-shadow: 0 8px 20px rgba(22, 117, 111, 0.2);
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+.brand-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  background: transparent;
 }
 .brand h1 { margin: 0; font-size: 19px; line-height: 1.05; color: var(--ink); }
 .brand p { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
@@ -1398,9 +1586,7 @@ button { cursor: pointer; }
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--card-bg);
-  box-shadow: var(--shadow-sm);
-  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 127, 255, 0.3);
 }
 .profile-box:hover {
   border-color: var(--brand);
@@ -1414,11 +1600,8 @@ button { cursor: pointer; }
 }
 .profile-eyebrow {
   margin: 0;
-  color: var(--brand-dark);
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 .profile-status {
   display: inline-flex;
@@ -1477,9 +1660,9 @@ button { cursor: pointer; }
 }
 .nav {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 18px;
+  align-items: center;
+  gap: 8px;
+  margin-left: 32px;
   flex: 1;
 }
 .nav-section {
@@ -1567,10 +1750,33 @@ button { cursor: pointer; }
   padding: 12px 16px;
   background: transparent;
   border: none;
-  color: var(--danger);
-  font-weight: 700;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nav-link:hover {
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+.nav-link.active {
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.user-profile-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  background: var(--panel);
   cursor: pointer;
-  border-radius: 8px;
   transition: all 0.2s;
 }
 .logout-btn:hover {
@@ -1607,7 +1813,7 @@ button { cursor: pointer; }
   align-items: center;
   justify-content: space-between;
   padding: 16px 24px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--line);
 }
 .pagination-info {
   font-size: 14px;
@@ -1642,7 +1848,7 @@ button { cursor: pointer; }
   border-color: var(--brand);
 }
 .pagination-ellipsis {
-  color: #9ca3af;
+  color: var(--muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1738,34 +1944,60 @@ button { cursor: pointer; }
   margin-left: auto;
 }
 .stats {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-bottom: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 364px; /* 2 cards x 174px + gap */
+  margin: 20px auto 24px;
 }
 .stat {
-  position: relative;
-  min-height: 106px;
-  overflow: hidden;
-  padding: 18px 18px 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--card-bg);
-  box-shadow: var(--shadow-sm);
-  transition: all 150ms ease;
-  cursor: pointer;
+  min-height: 96px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
-.stat:hover { transform: translateY(-3px); border-color: var(--brand); box-shadow: var(--shadow); }
+.stat:hover {
+  transform: translateY(-3px);
+  border-color: var(--brand);
+  box-shadow: var(--shadow);
+}
 .stat::after {
+  content: "";
   position: absolute;
   top: 0;
   right: 0;
   width: 74px;
   height: 74px;
-  border-radius: 0 8px 0 90px;
-  background: linear-gradient(135deg, var(--brand-soft), transparent);
-  content: "";
+  border-radius: 0 12px 0 90px;
+  background: linear-gradient(
+    135deg,
+    var(--brand-soft),
+    transparent
+  );
 }
-.stat span { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
-.stat strong { display: block; margin-top: 9px; font-size: 32px; line-height: 1; }
+.stat span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.stat strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 800;
+}
+/* Mobile */
+@media (max-width: 640px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+}
 .toolbar {
   display: grid;
   grid-template-columns: minmax(260px, 1.6fr) 170px 176px 150px;
@@ -2164,7 +2396,7 @@ tr:last-child td { border-bottom: 0; }
   flex-shrink: 0;
   background: transparent;
   border: none;
-  color: #9ca3af;
+  color: var(--muted);
   padding: 4px;
   border-radius: 4px;
   cursor: pointer;
@@ -2401,6 +2633,296 @@ tr:last-child td { border-bottom: 0; }
   font-style: italic;
   opacity: 0.8;
 }
+}
+:root {
+  --bg: #FDFBF7;
+  --panel: #ffffff;
+  --brand: #667FFF;
+  --brand-dark: #4f66e8;
+  --brand-soft: rgba(102, 127, 255, 0.12);
+  --focus: #667FFF;
+  --line: rgba(102, 127, 255, 0.16);
+  --shadow: 0 24px 70px rgba(102, 127, 255, 0.14);
+  --shadow-sm: 0 10px 28px rgba(22, 32, 42, 0.07);
+  --sidebar-bg: rgba(253, 251, 247, 0.86);
+  --card-bg: rgba(255, 255, 255, 0.88);
+}
+[data-theme='dark'] {
+  --ink: #F8FAFC;
+  --muted: #CBD5E1;
+  --line: rgba(142, 160, 255, 0.24);
+  --panel: #151827;
+  --bg: #0B1020;
+  --brand: #8ea0ff;
+  --brand-dark: #A9B6FF;
+  --brand-soft: rgba(102, 127, 255, 0.18);
+  --accent: #FBBF24;
+  --danger: #F87171;
+  --focus: #A9B6FF;
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.48);
+  --shadow-sm: 0 10px 28px rgba(0, 0, 0, 0.28);
+  --sidebar-bg: rgba(11, 16, 32, 0.88);
+  --card-bg: rgba(21, 24, 39, 0.92);
+  --input-bg: #101525;
+}
+[data-theme='light'] body {
+  background:
+    radial-gradient(circle at 12% 0, rgba(102, 127, 255, 0.12), transparent 28%),
+    radial-gradient(circle at 92% 8%, rgba(102, 127, 255, 0.08), transparent 24%),
+    #FDFBF7;
+}
+[data-theme='dark'] body {
+  background:
+    radial-gradient(circle at 12% 0, rgba(102, 127, 255, 0.18), transparent 30%),
+    radial-gradient(circle at 92% 8%, rgba(169, 182, 255, 0.10), transparent 26%),
+    var(--bg);
+}
+.app-shell {
+  display: block;
+  min-height: 100vh;
+}
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: auto;
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 12px clamp(16px, 4vw, 56px);
+  border-right: 0;
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 10px 28px rgba(22, 32, 42, 0.045);
+}
+.brand { padding: 0; }
+.nav {
+  margin: 0;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+.nav-section {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.nav-label { display: none; }
+.nav-item {
+  width: auto;
+  min-height: 42px;
+  padding: 9px 13px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
+.nav-item.active {
+  color: var(--brand-dark);
+  border-color: var(--line);
+  background: var(--brand-soft);
+}
+.nav-item.active::before { display: none; }
+.top-nav-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+.top-nav-actions .profile-box {
+  margin: 0;
+  padding: 7px 10px;
+  min-width: 230px;
+  box-shadow: none;
+}
+.top-nav-actions .profile-top,
+.top-nav-actions .profile-role { display: none; }
+.top-nav-actions .profile-row {
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 9px;
+}
+.top-nav-actions .avatar { width: 34px; height: 34px; border-radius: 999px; }
+.top-nav-actions .user-meta strong { font-size: 13px; }
+.top-nav-actions .user-email { font-size: 11px; }
+.logout-btn {
+  width: auto;
+  padding: 10px 12px;
+  border: 1px solid rgba(180, 35, 24, 0.14);
+  border-radius: 999px;
+  background: rgba(180, 35, 24, 0.05);
+}
+.main {
+  width: min(100%, 1600px);
+  margin: 0 auto;
+  padding: clamp(18px, 3vw, 44px) clamp(16px, 4vw, 64px) 56px;
+}
+.topbar, .grid, .toolbar { max-width: none; }
+.home-page { display: grid; gap: 24px; }
+.home-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  gap: 24px;
+  align-items: center;
+  padding: clamp(24px, 4vw, 48px);
+  background: linear-gradient(135deg, var(--card-bg), var(--brand-soft));
+}
+.home-hero h2 {
+  margin: 0;
+  max-width: 760px;
+  font-size: clamp(34px, 5vw, 72px);
+  line-height: 0.96;
+}
+.home-hero p {
+  max-width: 680px;
+  color: var(--muted);
+  font-size: clamp(16px, 1.4vw, 19px);
+  line-height: 1.6;
+}
+.home-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+.hero-quote { margin: 0; }
+.section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: none;
+  margin: 0 auto 12px;
+}
+.section-heading h3 { margin: 0; font-size: clamp(24px, 3vw, 36px); }
+.section-heading .page-kicker { margin-bottom: 8px; }
+.how-it-works { padding: 24px; }
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.steps-grid article {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+}
+.steps-grid span {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  color: white;
+  background: var(--brand);
+  font-weight: 900;
+}
+.steps-grid h4 { margin: 12px 0 8px; }
+.steps-grid p { margin: 0; color: var(--muted); line-height: 1.55; }
+.catalog { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+@media (min-width: 1500px) {
+  .catalog { grid-template-columns: repeat(4, minmax(280px, 1fr)); }
+  .stats { grid-template-columns: repeat(4, minmax(220px, 1fr)); }
+  .book-card { border-radius: 16px; }
+}
+@media (max-width: 980px) {
+  .sidebar {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    justify-items: stretch;
+  }
+  .brand, .top-nav-actions { justify-content: space-between; }
+  .nav { justify-content: flex-start; overflow-x: auto; padding-bottom: 2px; }
+  .nav-section { flex: 0 0 auto; }
+  .home-hero, .steps-grid, .stats, .toolbar { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    bottom: auto;
+    display: grid;
+    padding: 10px 14px;
+    border-top: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; }
+  .brand p { display: none; }
+  .top-nav-actions .profile-box { display: block; min-width: 0; flex: 1; }
+  .top-nav-actions .user-email { display: none; }
+  .logout-btn span { display: none; }
+  .nav-item { font-size: 12px; padding: 8px 10px; }
+  .nav-item-content { flex-direction: row; gap: 6px; }
+  .main { padding: 16px 14px 36px; }
+  .topbar .actions { grid-template-columns: 1fr; }
+  .pagination { flex-direction: column; align-items: stretch; gap: 12px; padding: 14px; }
+  .pagination-controls { justify-content: center; flex-wrap: wrap; }
+}
+.home-quote-card {
+  max-width: 1200px;
+  margin: 0 auto 2rem;
+  padding: 1.5rem 2rem;
+  background: linear-gradient(
+    135deg,
+    rgba(102, 127, 255, 0.08),
+    rgba(102, 127, 255, 0.03)
+  );
+  border: 1px solid rgba(102, 127, 255, 0.15);
+  border-radius: 20px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(102, 127, 255, 0.08);
+  transition: all 0.3s ease;
+}
+.home-quote-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 40px rgba(102, 127, 255, 0.12);
+}
+.quote-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #667fff;
+  margin-bottom: 1rem;
+}
+.quote-text {
+  margin: 0;
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
+  line-height: 1.7;
+  font-weight: 500;
+  color: var(--text-primary, #1f2937);
+  font-style: italic;
+}
+.quote-author {
+  margin-top: 1rem;
+  text-align: right;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #667fff;
+}
+[data-theme="dark"] .home-quote-card {
+  background: linear-gradient(
+    135deg,
+    rgba(102, 127, 255, 0.15),
+    rgba(102, 127, 255, 0.05)
+  );
+  border-color: rgba(102, 127, 255, 0.25);
+}
+[data-theme="dark"] .quote-text {
+  color: #f8fafc;
+}
+@media (max-width: 768px) {
+  .home-quote-card {
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    border-radius: 16px;
+  }
+  .quote-text {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  .quote-author {
+    font-size: 0.9rem;
+  }
 }
 </file>
 
