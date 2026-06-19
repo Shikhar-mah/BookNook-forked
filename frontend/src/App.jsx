@@ -11,7 +11,6 @@ import {
   RotateCcw,
   Sun,
   Undo2,
-  Home as HomeIcon,
   Search,
   User as UserIcon,
   ChevronDown
@@ -29,6 +28,7 @@ import { MyBooks } from "./pages/MyBooks";
 import { Borrowed } from "./pages/Borrowed";
 import { LoanHistory } from "./pages/LoanHistory";
 import { Details } from "./pages/Details";
+import { initials } from "./utils/helpers"
 import logo from "./styles/blue_altair_logo-removebg-preview.png";
 const blankBook = {
   title: "",
@@ -95,6 +95,8 @@ export default function App() {
   const [toasts, setToasts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dailyThought, setDailyThought] = useState(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
     localStorage.setItem("bn_theme", darkMode ? "dark" : "light");
