@@ -10,7 +10,11 @@ import {
   Plus,
   RotateCcw,
   Sun,
-  Undo2
+  Undo2,
+  Home as HomeIcon,
+  Search,
+  User as UserIcon,
+  ChevronDown
 } from "lucide-react";
 import { api } from "./api";
 import { Profile } from "./components/Profile";
@@ -124,6 +128,7 @@ export default function App() {
     setMe(user);
     setIsAuthenticated(true);
     notify("Welcome back, " + user.fullName + "!");
+    setView("home");
   }
   function handleLogout() {
     localStorage.removeItem("bn_token");
@@ -335,6 +340,34 @@ export default function App() {
             <button className="btn icon-only" onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
+            
+            <div className="profile-dropdown-container" style={{ position: "relative" }}>
+              <button className="user-profile-trigger" onClick={() => setShowProfileDropdown(!showProfileDropdown)}>
+                <div className="user-avatar-small">
+                  {me ? (me.avatarInitials || initials(me.fullName)) : "?"}
+                </div>
+                <ChevronDown size={14} color="var(--muted)" />
+              </button>
+              
+              {showProfileDropdown && (
+                <div className="card" style={{ 
+                  position: "absolute", 
+                  top: "100%", 
+                  right: 0, 
+                  marginTop: "8px", 
+                  minWidth: "240px", 
+                  zIndex: 200, 
+                  padding: "16px" 
+                }}>
+                  {me && <Profile user={me} />}
+                  <hr style={{ margin: "16px 0", border: "0", borderTop: "1px solid var(--line)" }} />
+                  <button className="logout-btn" onClick={handleLogout}>
+                    <LogOut size={18} />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </section>
         {view === "home" && (
